@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--host', default="127.0.0.1", type=str, help='elasticsearch instance host address (default: %(default)s)')
 parser.add_argument('--port', default=9200, type=int, help='elasticsearch instance port (default: %(default)d)')
 parser.add_argument('--config', metavar="YAML", type=str, help='elastalert config file to use.')
-parser.add_argument('--verbose', action="count", help='output other details')
+parser.add_argument('-v', '--verbose', action="count", help='output other details')
 
 arg_group = parser.add_argument_group('required arguments')
 arg_group.add_argument('--expected', metavar="JSON", required=True, type=str, help='JSON outline of test names and expected results')
@@ -65,7 +65,7 @@ def indexLogs(log_list):
                 
                     try:
                         res = es.index(index=index, id=id, doc_type=log_json['_type'], body=log_json['_source'])
-                        if args.verbose != None: printMessage(f"[+] {args.logs}/{log_file} WAS {res['result'].upper()}", 8)
+                        if args.verbose == 2: printMessage(f"[+] {args.logs}/{log_file} WAS {res['result'].upper()}", 8)
                         log_refs.setdefault(index + "[-]" + id, log_file)
                     
                         timestamp = log_json['_source']['real_timestamp']
@@ -89,7 +89,7 @@ def deleteLogs(log_list):
         curr = i.split("[-]")
         try: 
             res = es.delete(index=curr[0], id=curr[1])
-            if args.verbose != None: printMessage(f"[+] \"{curr[0]}-{curr[1]}\" WAS {res['result'].upper()}", 8)
+            if args.verbose == 2: printMessage(f"[+] \"{curr[0]}-{curr[1]}\" WAS {res['result'].upper()}", 8)
         except: printMessage(f"[ERROR] \"{curr[0]}-{curr[1]}\" WAS {res['result'].upper()}")
 
 def updateLogRange(timestamp, start, end):
