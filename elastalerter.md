@@ -59,7 +59,7 @@
 3. Download and install dependencies for __*elastalerter.py*__
 
    ```console
-   (v_env) $ wget https://jebidiah-anthony.github.io/prjct/files/elastalerter.zip
+   (v_env) $ wget https://github.com/jebidiah-anthony/elastalerter/blob/master/elastalerter.zip?raw=true
    ```
    ```
      ...omitted...

@@ -7,7 +7,7 @@ setuptools.setup(
     author = "",
     author_email = "jebidiah-anthony@github.com",
     description = "A simple alerter that returns the rule, id, and index.",
-    url = "https://github.com/jebidiah-anthony/jebidiah-anthony.github.io/tree/master/prjct/files/elastalerter",
+    url = "https://github.com/jebidiah-anthony/elastalerter/tree/master/elastalerter",
     packages = setuptools.find_packages(),
     classifiers = [
         "Programming Language :: Python :: 3",
