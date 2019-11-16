@@ -1,6 +1,6 @@
 # ./elastalerter.py
 
-## ENVIRONMENT:
+## ENVIRONMENT
 
 <table>
 <tr>
@@ -17,9 +17,63 @@
 </tr>
 </table>
 
-- This probably won't work on Windows Machines.
-- The program manually sets the rule's alert to __`elastalerter.alerter.Alert`__.
+---
+
+## IMPORTANT NOTES
+
+- This probably <span style="color:red">__won't work__</span> on Windows Machines.
 - The program manually creates a basic config file if none is specified.
+- The program manually sets the rule's alert to __`elastalerter.alerter.Alert`__.
+- If mappings are not specified during aggregation, key fields are __automatically set as keyword fields__:
+  ```yaml
+  query_key: field_name.keyword
+  metric_agg_key: field_name.keyword
+  ```
+- Logs to be used in a specific test could be a list of files or a directory containing all logs to be indexed.
+  ```json
+  "log": ["log1.json", "log2.json", ...]
+  
+   or
+
+  "log": "/dir"
+  ```
+- If a directory is specified, the program will check if it exists as is, in the directory specified in __`--logs`__, or in the current working directory.
+- Test results are laid out as follows in __`results.json`__:
+  ```json
+  {
+      "total": 6,
+      "pass": 3,
+      "fail": 3,
+      "tests": {
+          "test_2": {
+              "result": "PASSED",
+              "message": []
+          },
+          "test_2": {
+              "result": "PASSED",
+              "message": []
+          },
+          "test_3": {
+              "result": "FAILED",
+              "message": [
+                  "1 LOG(S) MATCHED: log001.json"
+              ]
+          },
+          "test_4": {
+              "result": "FAILED",
+              "message": [
+                  "7 LOG(S) DID NOT MATCH: agg_log001.json, agg_log002.json, agg_log003.json, agg_log004.json, agg_log005.json, log001.json, log003.json"
+              ]
+          },
+          "test_agg_1": {
+              "result": "FAILED",
+              "message": [
+                  "HITS (5) EXCEEDED THE THRESHOLD"
+              ]
+          }
+      }
+  }
+  ```
 
 ---
 
@@ -49,7 +103,7 @@
      New python executable in CURRENT_WORKING_DIRECTORY/v_env/bin/python3
      Also creating executable in CURRENT_WORKING_DIRECTORY/v_env/bin/python
      Installing setuptools, pip, wheel...
-     done.  
+     done.
 
    $ source v_env/bin/activate
 
@@ -67,7 +121,7 @@
      Length: 4248 (4.1K) [application/zip]
      Saving to: ‘elastalerter.zip’
 
-     elastalerter.zip         100%[================================>]   4.15K  --.-KB/s    in 0s  
+     elastalerter.zip         100%[================================>]   4.15K  --.-KB/s    in 0s
      ...omitted...
    ```
    ```console
@@ -75,8 +129,8 @@
    ```
    ```
      Archive:  elastalerter.zip
-       inflating: elastalerter.py         
-       inflating: requirements.txt        
+       inflating: elastalerter.py
+       inflating: requirements.txt
        inflating: setup.py 
    ```
    ```console
@@ -91,7 +145,7 @@
      twilio, texttable, elasticsearch, future, thehive4py, elastalert, tabulate
      ...omitted...
    ```
-   ```console   
+   ```console
    (v_env) $ pip install .
    ```
    ```
@@ -110,19 +164,23 @@
 (v_env) $ python elastalerter.py -h
 ```
 ```
-usage: ./test.py --logs LOGS_DIR --rules RULES_DIR --expected expected.json
+usage: python ./elastalerter.py --logs LOGS_DIR --rules RULES_DIR --expected expected.json
 
     SAMPLE "expected.json"
     ------------------------------------------------
     {
-        "test_id": {
+        "test_1": {
             "rule": "rule.yaml",
             "log": ["log1.json", "log2.json", ...],
-            "match": (True | False)
+            "match": (true | false),
+            "enabled": (true | false)
         },
-        "test_id": {
+        "test_2": {
             ...
-        }
+            "log": "/dir"
+            ...
+        },
+        ...
     }
 
 optional arguments:
@@ -130,7 +188,8 @@ optional arguments:
   --host HOST      elasticsearch instance host address (default: 127.0.0.1)
   --port PORT      elasticsearch instance port (default: 9200)
   --config YAML    elastalert config file to use.
-  -v, --verbose    output other details
+  --mappings JSON  field data type mappings.
+  --verbose        output other details
 
 required arguments:
   --expected JSON  JSON outline of test names and expected results
@@ -140,244 +199,187 @@ required arguments:
 
 ### default output
 ```console
-(v_env) $ python elastalerter.py --logs ./logs --rules ./rules --expected ./expected.json
+(v_env) $ python elastalerter.py --logs ./logs --rules ./rules --expected expected.json
 ```
 ```
-[+] RUNNING test_1
-
-    [+] TESTING RULE ( ./rules/rule01.yml )
+[+] RUNNING test_1 :
+    [+] TESTING RULE -- RULE01 ( ./rule01.yaml )
     [+] TEST ( test_1 ) PASSED
 
-[+] RUNNING test_2
-
-    [+] TESTING RULE ( ./rules/rule02.yml )
+[+] RUNNING test_2 :
+    [+] TESTING RULE -- RULE02 ( ./rule02.yaml )
     [+] TEST ( test_2 ) PASSED
 
-[+] RUNNING test_3
+[+] RUNNING test_3 :
+    [+] TESTING RULE -- RULE01 ( ./rule01.yaml )
+    [+] TEST ( test_3 ) FAILED
 
-    [+] TESTING RULE ( ./rules/rule01.yml )
-    [+] TEST ( test_3 ) PASSED
+[+] RUNNING test_4 :
+    [+] SPECIFIED LOGS IS A DIRECTORY ( ./logs )
+        [ERROR] "test_file" IS NOT A VALID JSON FILE.
+        [ERROR] "test_file.json" IS NOT A VALID LOG FILE.
+    [+] TESTING RULE -- RULE02 ( ./rule02.yaml )
+    [+] TEST ( test_4 ) FAILED
 
-[+] RUNNING test_4
-
-    [+] TESTING RULE ( ./rules/rule02.yml )
-    [+] TEST ( test_4 ) PASSED
-
-[+] RUNNING test_5
-
-    [+] TESTING RULE ( ./rules/rule01.yml )
-    [+] TEST ( test_5 ) FAILED
-
-[+] RUNNING test_6
-
-    [+] TESTING RULE ( ./rules/rule02.yml )
-    [+] TEST ( test_6 ) FAILED
-
-[+] RUNNING test_agg_1
-
-    [+] TESTING RULE ( ./rules/agg_rule01.yml )
+[+] RUNNING test_agg_1 :
+    [+] TESTING RULE -- AGG_RULE01 ( ./agg_rule01.yaml )
     [+] TEST ( test_agg_1 ) FAILED
 
-[+] RUNNING test_agg_2
+[+] RUNNING test_agg_02 :
+    [+] TEST ( test_agg_2 ) WAS DISABLED
 
-    [+] TESTING RULE ( ./rules/agg_rule01.yml )
-    [+] TEST ( test_agg_2 ) FAILED
 
 [+] RESULTS WERE OUTPUT TO CURRENT_WORKING_DIRECTORY/results.json
 
-    ╒════════════╤══════════╤═══════════════════════════════════╕
-    │ TestID     │ RESULT   │ MESSAGE                           │
-    ╞════════════╪══════════╪═══════════════════════════════════╡
-    │ test_1     │ PASSED   │                                   │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_2     │ PASSED   │                                   │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_3     │ PASSED   │                                   │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_4     │ PASSED   │                                   │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_5     │ FAILED   │ > MATCHED: log001.json            │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_6     │ FAILED   │ > NO LOG(S) MATCHED.              │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_agg_1 │ FAILED   │ > HITS (5) EXCEEDED THE THRESHOLD │
-    ├────────────┼──────────┼───────────────────────────────────┤
-    │ test_agg_2 │ FAILED   │ > NO LOG(S) MATCHED.              │
-    ╘════════════╧══════════╧═══════════════════════════════════╛
-
+    ╒════════════╤══════════╤═════════════════════════════════════════════════════════════╕
+    │ TestID     │ RESULT   │ MESSAGE                                                     │
+    ╞════════════╪══════════╪═════════════════════════════════════════════════════════════╡
+    │ test_1     │ PASSED   │                                                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_2     │ PASSED   │                                                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_3     │ FAILED   │ > 1 LOG(S) MATCHED: log001.json                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_4     │ FAILED   │ > 7 LOG(S) DID NOT MATCH: agg_log001.json, agg_log002.json, │
+    │            │          │   agg_log003.json, agg_log004.json, agg_log005.json,        │
+    │            │          │   log001.json, log003.json                                  │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_agg_1 │ FAILED   │ > NO LOG(S) MATCHED.                                        │
+    ╘════════════╧══════════╧═════════════════════════════════════════════════════════════╛
 ```
 
-### verbose (__`-v, --verbose`__)
+### mappings (__`--mappings`__)
+
+#### > sample mappings.json
+```json
+{
+    "mappings": {
+        "properties": {
+            "ip": { "type": "ip" },
+            "port": { "type": "integer" }
+        }
+    }
+}
+```
+
+#### > execution
+```console
+(v_env) $ python elastalerter.py --logs ./logs --rules ./rules --expected expected.json --mappings mappings.json
+```
+```
+[+] RUNNING test_1 :
+    [+] TESTING RULE -- RULE01 ( ./rule01.yaml )
+    [+] TEST ( test_1 ) PASSED
+
+[+] RUNNING test_2 :
+    [+] TESTING RULE -- RULE02 ( ./rule02.yaml )
+    [+] TEST ( test_2 ) PASSED
+
+[+] RUNNING test_3 :
+    [+] TESTING RULE -- RULE01 ( ./rule01.yaml )
+    [+] TEST ( test_3 ) FAILED
+
+[+] RUNNING test_4 :
+    [+] SPECIFIED LOGS IS A DIRECTORY ( ./logs )
+        [ERROR] "test_file" IS NOT A VALID JSON FILE.
+        [ERROR] "test_file.json" IS NOT A VALID LOG FILE.
+    [+] TESTING RULE -- RULE02 ( ./rule02.yaml )
+    [+] TEST ( test_4 ) FAILED
+
+[+] RUNNING test_agg_1 :
+    [+] TESTING RULE -- AGG_RULE01 ( ./agg_rule01.yaml )
+    [+] TEST ( test_agg_1 ) FAILED
+
+[+] RUNNING test_agg_02 :
+    [+] TEST ( test_agg_2 ) WAS DISABLED
+
+
+[+] RESULTS WERE OUTPUT TO CURRENT_WORKING_DIRECTORY/results.json
+
+    ╒════════════╤══════════╤═════════════════════════════════════════════════════════════╕
+    │ TestID     │ RESULT   │ MESSAGE                                                     │
+    ╞════════════╪══════════╪═════════════════════════════════════════════════════════════╡
+    │ test_1     │ PASSED   │                                                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_2     │ PASSED   │                                                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_3     │ FAILED   │ > 1 LOG(S) MATCHED: log001.json                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_4     │ FAILED   │ > 7 LOG(S) DID NOT MATCH: agg_log001.json, agg_log002.json, │
+    │            │          │   agg_log003.json, agg_log004.json, agg_log005.json,        │
+    │            │          │   log001.json, log003.json                                  │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_agg_1 │ FAILED   │ > HITS (5) EXCEEDED THE THRESHOLD                           │
+    ╘════════════╧══════════╧═════════════════════════════════════════════════════════════╛
+```
+
+### verbose (__`--verbose`__)
 ```console
 (v_env) $ python elastalerter.py --logs ./logs --rules ./rules --expected ./expected.json --verbose
 ```
 ```
-[+] RUNNING test_1
-
-    [+] INDEXING SPECIFIED LOGS...
+[+] RUNNING test_1 :
+    [+] A NEW INDEX ( test_1 ) WAS CREATED
     [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule01.yml )
+    [+] TESTING RULE -- RULE01 ( ./rule01.yaml )
     [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
+    [+] DELETING TEST INDEX...
     [+] TEST ( test_1 ) PASSED
 
-[+] RUNNING test_2
-
-    [+] INDEXING SPECIFIED LOGS...
+[+] RUNNING test_2 :
+    [+] A NEW INDEX ( test_2 ) WAS CREATED
     [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule02.yml )
+    [+] TESTING RULE -- RULE02 ( ./rule02.yaml )
     [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
+    [+] DELETING TEST INDEX...
     [+] TEST ( test_2 ) PASSED
 
-[+] RUNNING test_3
-
-    [+] INDEXING SPECIFIED LOGS...
+[+] RUNNING test_3 :
+    [+] A NEW INDEX ( test_3 ) WAS CREATED
     [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule01.yml )
+    [+] TESTING RULE -- RULE01 ( ./rule01.yaml )
     [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-    [+] TEST ( test_3 ) PASSED
+    [+] DELETING TEST INDEX...
+    [+] TEST ( test_3 ) FAILED
 
-[+] RUNNING test_4
-
-    [+] INDEXING SPECIFIED LOGS...
+[+] RUNNING test_4 :
+    [+] A NEW INDEX ( test_4 ) WAS CREATED
+    [+] SPECIFIED LOGS IS A DIRECTORY ( ./logs )
+        [ERROR] "test_file" IS NOT A VALID JSON FILE.
+        [ERROR] "test_file.json" IS NOT A VALID LOG FILE.
     [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule02.yml )
+    [+] TESTING RULE -- RULE02 ( ./rule02.yaml )
     [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-    [+] TEST ( test_4 ) PASSED
+    [+] DELETING TEST INDEX...
+    [+] TEST ( test_4 ) FAILED
 
-[+] RUNNING test_5
-
-    [+] INDEXING SPECIFIED LOGS...
+[+] RUNNING test_agg_1 :
+    [+] A NEW INDEX ( test_agg_1 ) WAS CREATED
     [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule01.yml )
+    [+] TESTING RULE -- AGG_RULE01 ( ./agg_rule01.yaml )
     [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-    [+] TEST ( test_5 ) FAILED
+    [+] DELETING TEST INDEX...
+    [+] TEST ( test_agg_1 ) FAILED
 
-[+] RUNNING test_6
+[+] RUNNING test_agg_02 :
+    [+] TEST ( test_agg_2 ) WAS DISABLED
 
-    [+] INDEXING SPECIFIED LOGS...
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule02.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-    [+] TEST ( test_6 ) FAILED
 
 [+] RESULTS WERE OUTPUT TO CURRENT_WORKING_DIRECTORY/results.json
 
-    ╒══════════╤══════════╤════════════════════════╕
-    │ TestID   │ RESULT   │ MESSAGE                │
-    ╞══════════╪══════════╪════════════════════════╡
-    │ test_1   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_2   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_3   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_4   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_5   │ FAILED   │ > MATCHED: log001.json │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_6   │ FAILED   │ > NO LOG(S) MATCHED.   │
-    ╘══════════╧══════════╧════════════════════════╛
-
+    ╒════════════╤══════════╤═════════════════════════════════════════════════════════════╕
+    │ TestID     │ RESULT   │ MESSAGE                                                     │
+    ╞════════════╪══════════╪═════════════════════════════════════════════════════════════╡
+    │ test_1     │ PASSED   │                                                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_2     │ PASSED   │                                                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_3     │ FAILED   │ > 1 LOG(S) MATCHED: log001.json                             │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_4     │ FAILED   │ > 7 LOG(S) DID NOT MATCH: agg_log001.json, agg_log002.json, │
+    │            │          │   agg_log003.json, agg_log004.json, agg_log005.json,        │
+    │            │          │   log001.json, log003.json                                  │
+    ├────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+    │ test_agg_1 │ FAILED   │ > HITS (5) EXCEEDED THE THRESHOLD                           │
+    ╘════════════╧══════════╧═════════════════════════════════════════════════════════════╛
 ```
-
-### very verbose (__`-vv`__)
-```console
-(v_env) $ python elastalerter.py --logs ./logs --rules ./rules --expected ./expected.json -vv
-```
-```
-[+] RUNNING test_1
-
-    [+] INDEXING SPECIFIED LOGS...
-        [+] ./logs/log001.json WAS CREATED
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule01.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-        [+] "log-00000001" WAS DELETED
-    [+] TEST ( test_1 ) PASSED
-
-[+] RUNNING test_2
-
-    [+] INDEXING SPECIFIED LOGS...
-        [+] ./logs/log002.json WAS UPDATED
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule02.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-        [+] "log-00000002" WAS DELETED
-    [+] TEST ( test_2 ) PASSED
-
-[+] RUNNING test_3
-
-    [+] INDEXING SPECIFIED LOGS...
-        [+] ./logs/log002.json WAS CREATED
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule01.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-        [+] "log-00000002" WAS DELETED
-    [+] TEST ( test_3 ) PASSED
-
-[+] RUNNING test_4
-
-    [+] INDEXING SPECIFIED LOGS...
-        [+] ./logs/log001.json WAS CREATED
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule02.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-        [+] "log-00000001" WAS DELETED
-    [+] TEST ( test_4 ) PASSED
-
-[+] RUNNING test_5
-
-    [+] INDEXING SPECIFIED LOGS...
-        [+] ./logs/log001.json WAS CREATED
-        [+] ./logs/log003.json WAS CREATED
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule01.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-        [+] "log-00000001" WAS DELETED
-        [+] "log-00000003" WAS DELETED
-    [+] TEST ( test_5 ) FAILED
-
-[+] RUNNING test_6
-
-    [+] INDEXING SPECIFIED LOGS...
-        [+] ./logs/log001.json WAS CREATED
-        [+] ./logs/log003.json WAS CREATED
-    [+] TIMESTAMP RANGE -- [2019-09-16T15:59:57 - 2019-09-16T15:59:57]
-    [+] TESTING RULE ( ./rules/rule02.yml )
-    [+] UPDATING RESULTS...
-    [+] CLEARING INDEXED LOGS...
-        [+] "log-00000001" WAS DELETED
-        [+] "log-00000003" WAS DELETED
-    [+] TEST ( test_6 ) FAILED
-
-[+] RESULTS WERE OUTPUT TO CURRENT_WORKING_DIRECTORY/results.json
-
-    ╒══════════╤══════════╤════════════════════════╕
-    │ TestID   │ RESULT   │ MESSAGE                │
-    ╞══════════╪══════════╪════════════════════════╡
-    │ test_1   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_2   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_3   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_4   │ PASSED   │                        │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_5   │ FAILED   │ > MATCHED: log001.json │
-    ├──────────┼──────────┼────────────────────────┤
-    │ test_6   │ FAILED   │ > NO LOG(S) MATCHED.   │
-    ╘══════════╧══════════╧════════════════════════╛
-
-```
-
