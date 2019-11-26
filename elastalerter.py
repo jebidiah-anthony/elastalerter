@@ -77,7 +77,6 @@ def createIndex(index):
     else: mappings = None
 
     res = es.indices.create(index=index, ignore=400, body=mappings)
-
     if res.get("error", False): return False
     return True
 
@@ -127,7 +126,6 @@ def indexLogs(test_index, log_dir, log_list):
                     try:
                         res = es.index(index=test_index, id=id, body=log_json['_source'])
                         log_refs.setdefault(test_index + "[-]" + id, log_file)
-                    
                         timestamp = log_json['_source']['real_timestamp']
                         if start == "" and end == "": start, end = timestamp, timestamp
                         else: start, end = updateLogRange( timestamp, start, end )
@@ -204,10 +202,9 @@ def updateRuleFile(rule_path, index, out_file):
 
 def testRule(rule, start, end):
     try:
-        start = (dp.parse(start[:-5]) - dtd(days=0.7)).isoformat()
-        end = (dp.parse(end[:-5]) + dtd(days=0.7)).isoformat()
+        start = (dp.parse(start[:-5]) - dtd(days=1)).isoformat()
+        end = (dp.parse(end[:-5]) + dtd(days=0.5)).isoformat()
 
-        time.sleep(0.125)
         os.system(f"elastalert-test-rule --alert --config {args.config} --start {start} --end {end} {rule} >/dev/null 2>&1")
         time.sleep(0.125)
                 
@@ -339,6 +336,7 @@ def main():
                 if type(expectations[test]["log"]) is str and log_dir: 
                     expectations[test]["log"] = sorted(os.listdir(log_dir))
                 logs, start, end, messages = indexLogs( new_index, log_dir, expectations[test]['log'] )
+                time.sleep(2)
             else: start, end = "", ""
 
             if start != "" and end != "": 
